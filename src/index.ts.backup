@@ -1,0 +1,173 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
+import fetch from "node-fetch";
+
+
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+if (!GOOGLE_MAPS_API_KEY) {
+  throw new Error("GOOGLE_MAPS_API_KEY environment variable is required");
+}
+
+const server = new McpServer({
+  name: "google-maps",
+  version: "1.0.0",
+});
+
+/**
+ * ROUTES API (Directions)
+ */
+server.registerTool("maps_directions", {
+  description: "Get directions between two locations using Google Routes API",
+  inputSchema: {
+    origin: z.string().describe("Origin address"),
+    destination: z.string().describe("Destination address"),
+    travelMode: z.enum(["DRIVE", "WALK", "BICYCLE", "TRANSIT"]).optional().default("DRIVE").describe("Travel mode"),
+  },
+}, async ({
+  origin,
+  destination,
+  travelMode = "DRIVE",
+}: {
+  origin: string;
+  destination: string;
+  travelMode?: "DRIVE" | "WALK" | "BICYCLE" | "TRANSIT";
+}) => {
+  const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
+
+  const body = {
+    origin: { address: origin },
+    destination: { address: destination },
+    travelMode: travelMode || "DRIVE",
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+      "X-Goog-FieldMask":
+        "routes.duration,routes.distanceMeters,routes.polyline,routes.legs",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    return {
+      content: [{ type: "text", text: `Directions request failed: ${response.statusText}` }]
+    };
+  }
+
+  const data = await response.json();
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }]
+  };
+});
+
+/**
+ * PLACES API (Text Search)
+ */
+server.registerTool("maps_search_places", {
+  description: "Search places using Google Places API (New)",
+  inputSchema: {
+    query: z.string().describe("Search query for places"),
+  },
+}, async ({ query }: { query: string }) => {
+  const url = "https://places.googleapis.com/v1/places:searchText";
+  const body = { textQuery: query };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+      "X-Goog-FieldMask":
+        "places.displayName,places.formattedAddress,places.location,places.types",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    return {
+      content: [{ type: "text", text: `Places search failed: ${response.statusText}` }]
+    };
+  }
+
+  const data = await response.json();
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }]
+  };
+});
+
+/**
+ * REVERSE GEOCODING
+ */
+server.registerTool("maps_reverse_geocode", {
+  description: "Get address from latitude/longitude using Google Places Nearby",
+  inputSchema: {
+    latitude: z.number().describe("Latitude coordinate"),
+    longitude: z.number().describe("Longitude coordinate"),
+  },
+}, async ({
+  latitude,
+  longitude,
+}: {
+  latitude: number;
+  longitude: number;
+}) => {
+  const url = "https://places.googleapis.com/v1/places:searchNearby";
+
+  const body = {
+    locationRestriction: {
+      circle: {
+        center: { latitude, longitude },
+        radius: 50,
+      },
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+      "X-Goog-FieldMask":
+        "places.displayName,places.formattedAddress,places.location",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    return {
+      content: [{ type: "text", text: `Reverse geocoding failed: ${response.statusText}` }]
+    };
+  }
+
+  const data = await response.json();
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }]
+  };
+});
+
+/**
+ * HEALTH CHECK
+ */
+server.registerTool("maps_ping", {
+  description: "Check if the Google Maps MCP server is alive",
+  inputSchema: {},
+}, async () => {
+  return {
+    content: [{ type: "text", text: "Google Maps MCP server is alive ✅" }]
+  };
+});
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.log("Google Maps MCP server is running...");
+}
+
+main().catch((error) => {
+  console.error("Server error:", error);
+  process.exit(1);
+});

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "resolveJsonModule": true,
+    "outDir": "dist",
+    "types": ["node"],              // include le definizioni di Node.js
+    "baseUrl": ".",                 // risoluzione base dei path
+    "lib": ["ES2022", "DOM"],       // librerie standard
+    "declaration": true,            // genera .d.ts
+    "sourceMap": true,              // genera mappe per debug
+    "allowJs": false                // impedisce di compilare JS puro
+  },
+  "include": [
+    "src/**/*",
+    "src/global.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

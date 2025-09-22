@@ -1,0 +1,14 @@
+services:
+  google-maps-mcp:
+    build: .
+    container_name: google-maps-mcp
+    environment:
+      NODE_ENV: production
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}  # Get from host environment variable
+    # MCP servers use stdio transport, no HTTP ports needed
+    # ports:
+    #   - "3001:3001"   # Not needed for stdio-based MCP servers
+    restart: unless-stopped
+    # Enable stdin_open and tty for stdio communication
+    stdin_open: true
+    tty: true
