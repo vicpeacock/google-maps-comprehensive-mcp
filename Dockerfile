@@ -40,5 +40,9 @@ ENV NODE_ENV=production
 # Set default Google Maps API key (can be overridden)
 ENV GOOGLE_MAPS_API_KEY=""
 
+# Copy the wrapper script
+COPY run-with-api-key.sh ./
+RUN chmod +x run-with-api-key.sh
+
 # Start the MCP server
-CMD ["node", "dist/index.js"]
+CMD ["./run-with-api-key.sh"]
