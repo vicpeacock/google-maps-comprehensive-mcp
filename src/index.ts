@@ -280,10 +280,11 @@ server.registerTool("maps_ping", {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.log("Google Maps MCP server is running...");
+  // MCP servers should not output to stdout except for JSON-RPC messages
 }
 
 main().catch((error) => {
-  console.error("Server error:", error);
+  // Use stderr for error logging to avoid interfering with MCP protocol
+  process.stderr.write(`Server error: ${error.message}\n`);
   process.exit(1);
 });
